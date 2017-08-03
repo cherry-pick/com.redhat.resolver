@@ -745,7 +745,9 @@ int main(int argc, char **argv) {
                                                 else
                                                         fprintf(stderr, "%s: status %i:%i\n", service->executable, si.si_code, si.si_status);
 
-                                                service_reset(service);
+                                                if (service_reset(service) < 0)
+                                                        return EXIT_FAILURE;
+
                                                 service->failed = true;
                                                 timeout = 1000;
                                                 fprintf(stderr, "%s: disable re-execution for %i msec\n", service->executable, timeout);

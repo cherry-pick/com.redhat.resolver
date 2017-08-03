@@ -73,6 +73,8 @@ long service_reset(Service *service) {
         if (listen_fd < 0)
                 return listen_fd;
 
+        service->listen_fd = listen_fd;
+
         return 0;
 }
 
