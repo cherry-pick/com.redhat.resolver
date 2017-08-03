@@ -5,4 +5,9 @@ interface org.varlink.resolver
 # Resolve an interface name to a registered varlink service address
 method Resolve(interface: string) -> (address: string)
 
+# Get all resolvable interfaces
+method GetInterfaces() -> (
+  interfaces: (interface: string, address: string)[]
+)
+
 error InterfaceNotFound ()

@@ -22,11 +22,6 @@ type Config (
   services: Service[]
 )
 
-type Interface (
-  name: string,
-  address: string
-)
-
 # Retrieve the current configuration.
 method GetConfig() -> (config: Config)
 
@@ -37,4 +32,6 @@ method AddServices(services: Service[]) -> ()
 method RemoveService(interface: string) -> ()
 
 # Retrieve the current list of available interfaces.
-method GetInterfaces() -> (interfaces: Interface[])
+method GetInterfaces() -> (
+  interfaces: (interface: string, address: string)[]
+)

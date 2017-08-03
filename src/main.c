@@ -305,7 +305,7 @@ static long org_varlink_activator_GetInterfaces(VarlinkServer *server,
                 _cleanup_(varlink_object_unrefp) VarlinkObject *interface = NULL;
 
                 varlink_object_new(&interface);
-                varlink_object_set_string(interface, "name", m->interfaces[i].name);
+                varlink_object_set_string(interface, "interface", m->interfaces[i].name);
                 varlink_object_set_string(interface, "address", m->interfaces[i].service->address);
 
                 varlink_array_append_object(interfaces, interface);
@@ -602,6 +602,12 @@ int main(int argc, char **argv) {
         r = varlink_server_set_method_callback(m->server,
                                                "org.varlink.activator.GetConfig",
                                                org_varlink_registry_GetConfig, m);
+        if (r < 0)
+                return EXIT_FAILURE;
+
+        r = varlink_server_set_method_callback(m->server,
+                                               "org.varlink.resolver.GetInterfaces",
+                                               org_varlink_activator_GetInterfaces, m);
         if (r < 0)
                 return EXIT_FAILURE;
 
