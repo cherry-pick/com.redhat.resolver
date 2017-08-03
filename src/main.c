@@ -76,14 +76,14 @@ static long manager_watch_service(Manager *m, Service *service) {
 
         ev.events = EPOLLIN;
         ev.data.ptr = service;
-        if (epoll_ctl(m->epoll_fd, EPOLL_CTL_ADD, varlink_server_get_listen_fd(service->server), &ev) < 0)
+        if (epoll_ctl(m->epoll_fd, EPOLL_CTL_ADD, service->listen_fd, &ev) < 0)
                 return -errno;
 
         return 0;
 }
 
 static long manager_unwatch_service(Manager *m, Service *service) {
-        if (epoll_ctl(m->epoll_fd, EPOLL_CTL_DEL, varlink_server_get_listen_fd(service->server), NULL) < 0)
+        if (epoll_ctl(m->epoll_fd, EPOLL_CTL_DEL, service->listen_fd, NULL) < 0)
                 return -errno;
 
         return 0;

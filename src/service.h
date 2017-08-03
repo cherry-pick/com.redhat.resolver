@@ -7,8 +7,10 @@
 typedef struct {
         char *name;
         char *address;
-        VarlinkServer *server;
         unsigned long index;
+
+        int listen_fd;
+        char *path_to_unlink;
 
         unsigned long n_interfaces;
         char **interfaces;

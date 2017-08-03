@@ -17,7 +17,6 @@ long service_new(Service **servicep,
                  bool activate,
                  const char *config) {
         _cleanup_(service_freep) Service *service = NULL;
-        long r;
 
         service = calloc(1, sizeof(Service));
         service->pid = -1;
@@ -31,6 +30,8 @@ long service_new(Service **servicep,
         service->n_interfaces = n_interfaces;
 
         if (executable) {
+                int listen_fd;
+
                 service->executable = strdup(executable);
 
                 if (config)
@@ -41,14 +42,11 @@ long service_new(Service **servicep,
                 service->argv[1] = service->address;
                 service->argv[2] = service->config;
 
-                r = varlink_server_new(&service->server,
-                                       service->address,
-                                       -1,
-                                       NULL,
-                                       NULL,
-                                       NULL, 0);
-                if (r < 0)
-                        return r;
+                listen_fd = varlink_listen(service->address, &service->path_to_unlink);
+                if (listen_fd < 0)
+                        return listen_fd;
+
+                service->listen_fd = listen_fd;
         }
 
         service->activate_at_startup = activate;
@@ -60,21 +58,35 @@ long service_new(Service **servicep,
 }
 
 long service_reset(Service *service) {
-        varlink_server_free(service->server);
-        return varlink_server_new(&service->server,
-                                  service->address,
-                                  -1,
-                                  NULL,
-                                  NULL,
-                                  NULL, 0);
+        int listen_fd;
+
+        close(service->listen_fd);
+        service->listen_fd = -1;
+
+        if (service->path_to_unlink) {
+                unlink(service->path_to_unlink);
+                free(service->path_to_unlink);
+                service->path_to_unlink = NULL;
+        }
+
+        listen_fd = varlink_listen(service->address, &service->path_to_unlink);
+        if (listen_fd < 0)
+                return listen_fd;
+
+        return 0;
 }
 
 Service *service_free(Service *service) {
         if (service->pid >= 0)
                 kill(service->pid, SIGTERM);
 
-        if (service->server)
-                varlink_server_free(service->server);
+        if (service->listen_fd >= 0)
+                close(service->listen_fd);
+
+        if (service->path_to_unlink) {
+                unlink(service->path_to_unlink);
+                free(service->path_to_unlink);
+        }
 
         for (unsigned long i = 0; i < service->n_interfaces; i += 1)
                 free(service->interfaces[i]);
@@ -107,7 +119,7 @@ long service_activate(Service *service) {
                 return 0;
 
         /* Move activator fd to fd 3. All other fds have CLOEXEC set. */
-        if (dup2(varlink_server_get_listen_fd(service->server), 3) < 0)
+        if (dup2(service->listen_fd, 3) < 0)
                 return -errno;
 
         if (prctl(PR_SET_PDEATHSIG, SIGTERM) < 0)
