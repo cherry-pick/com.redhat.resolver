@@ -1,0 +1,40 @@
+# The Activator Interface allows to configure and maintain a list of available
+# interfaces. When an interface is accessed by a client, the activator receives
+# the initial message, starts the service which implements this interface, and
+# hands over the listening connection with the initial message.
+interface org.varlink.activator
+
+type Executable (
+  path: string,
+  user_id: int,
+  group_id: int
+)
+
+type Service (
+  name: string,
+  address: string,
+  interfaces: string[],
+  executable: Executable,
+  activate_at_startup: bool
+)
+
+type Config (
+  services: Service[]
+)
+
+type Interface (
+  name: string,
+  address: string
+)
+
+# Retrieve the current configuration.
+method GetConfig() -> (config: Config)
+
+# Add services to the current list of managed services.
+method AddServices(services: Service[]) -> ()
+
+# Remove and stop services from the list of manages services.
+method RemoveService(interface: string) -> ()
+
+# Retrieve the current list of available interfaces.
+method GetInterfaces() -> (interfaces: Interface[])

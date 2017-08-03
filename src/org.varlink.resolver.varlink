@@ -1,0 +1,8 @@
+# Interface to resolve reverse-domain interface names to
+# service adresses
+interface org.varlink.resolver
+
+# Resolve an interface name to a registered varlink service address
+method Resolve(interface: string) -> (address: string)
+
+error InterfaceNotFound ()
