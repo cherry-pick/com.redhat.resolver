@@ -581,7 +581,6 @@ int main(int argc, char **argv) {
 
         r = varlink_server_new(&m->server,
                                address, fd,
-                               program_invocation_short_name,
                                NULL,
                                interfaces, ARRAY_SIZE(interfaces));
         if (r < 0)
