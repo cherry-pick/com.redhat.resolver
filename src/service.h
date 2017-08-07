@@ -5,7 +5,6 @@
 #include <varlink.h>
 
 typedef struct {
-        char *name;
         char *address;
         unsigned long index;
 
@@ -27,7 +26,6 @@ typedef struct {
 } Service;
 
 long service_new(Service **servicep,
-                 const char *name,
                  const char *address,
                  const char **interfaces, unsigned long n_interfaces,
                  const char *executable,

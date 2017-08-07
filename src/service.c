@@ -10,7 +10,6 @@
 #include <unistd.h>
 
 long service_new(Service **servicep,
-                 const char *name,
                  const char *address,
                  const char **interfaces, unsigned long n_interfaces,
                  const char *executable,
@@ -21,7 +20,6 @@ long service_new(Service **servicep,
         service = calloc(1, sizeof(Service));
         service->pid = -1;
 
-        service->name = strdup(name);
         service->address = strdup(address);
 
         service->interfaces = calloc(n_interfaces, sizeof(char *));
@@ -94,7 +92,6 @@ Service *service_free(Service *service) {
                 free(service->interfaces[i]);
         free(service->interfaces);
 
-        free(service->name);
         free(service->address);
         free(service->executable);
         free(service->config);

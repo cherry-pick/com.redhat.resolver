@@ -194,11 +194,11 @@ static long manager_find_service_by_pid(Manager *m, Service **servicep, pid_t pi
         return -ESRCH;
 }
 
-static long manager_find_service_by_name(Manager *m, Service **servicep, const char *name) {
+static long manager_find_service_by_address(Manager *m, Service **servicep, const char *address) {
         for (unsigned long i = 0; i < m->n_services; i += 1) {
                 Service *service = m->services[i];
 
-                if (strcmp(service->name, name) == 0) {
+                if (strcmp(service->address, address) == 0) {
                         *servicep = service;
 
                         return 0;
@@ -273,7 +273,6 @@ static long org_varlink_registry_GetConfig(VarlinkServer *server,
                 varlink_object_set_int(executablev, "group_id", service->gid);
 
                 varlink_object_new(&servicev);
-                varlink_object_set_string(servicev, "name", service->name);
                 varlink_object_set_string(servicev, "address", service->address);
                 varlink_object_set_array(servicev, "interfaces", interfacesv);
                 varlink_object_set_object(servicev, "executable", executablev);
@@ -339,7 +338,6 @@ static long org_varlink_registry_AddServices(VarlinkServer *server,
                 _cleanup_(varlink_object_unrefp) VarlinkObject *servicev = NULL;
                 _cleanup_(varlink_object_unrefp) VarlinkObject *executablev = NULL;
                 _cleanup_(varlink_array_unrefp) VarlinkArray *interfacesv = NULL;
-                const char *name;
                 const char *address;
                 const char *executable = NULL;
                 bool activate = false;
@@ -352,9 +350,7 @@ static long org_varlink_registry_AddServices(VarlinkServer *server,
                 if (r < 0)
                         return r;
 
-                if (varlink_object_get_string(servicev, "name", &name) < 0 ||
-                    varlink_object_get_string(servicev, "address", &address) < 0 ||
-                    varlink_object_get_string(servicev, "executable", &executable) < 0)
+                if (varlink_object_get_string(servicev, "address", &address) < 0)
                         return -EUCLEAN;
 
                 if (varlink_object_get_object(servicev, "executable", &executablev) >= 0) {
@@ -378,7 +374,6 @@ static long org_varlink_registry_AddServices(VarlinkServer *server,
                 }
 
                 r = service_new(&service,
-                                name,
                                 address,
                                 interfaces, n_interfaces,
                                 executable,
@@ -387,7 +382,7 @@ static long org_varlink_registry_AddServices(VarlinkServer *server,
                 if (r < 0)
                         return r;
 
-                r = manager_find_service_by_name(m, &service_old, service->name);
+                r = manager_find_service_by_address(m, &service_old, service->address);
                 if (r >= 0) {
                         r = manager_remove_service(m, service_old);
                         if (r < 0)
@@ -494,7 +489,6 @@ static long manager_read_config(Manager *m, const char *config) {
                 VarlinkObject *servicev;
                 VarlinkObject *executablev;
                 VarlinkArray *interfacesv;
-                const char *name;
                 const char *address;
                 _cleanup_(freep) const char **interfaces = NULL;
                 unsigned long n_interfaces;
@@ -506,8 +500,7 @@ static long manager_read_config(Manager *m, const char *config) {
                 if (r < 0)
                         return r;
 
-                if (varlink_object_get_string(servicev, "name", &name) < 0 ||
-                    varlink_object_get_string(servicev, "address", &address) < 0)
+                if (varlink_object_get_string(servicev, "address", &address) < 0)
                         return -EUCLEAN;
 
                 if (varlink_object_get_object(servicev, "executable", &executablev) >= 0) {
@@ -531,7 +524,6 @@ static long manager_read_config(Manager *m, const char *config) {
                 }
 
                 r = service_new(&service,
-                                name,
                                 address,
                                 interfaces, n_interfaces,
                                 executable,

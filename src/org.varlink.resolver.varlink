@@ -10,4 +10,4 @@ method GetInterfaces() -> (
   interfaces: (interface: string, address: string)[]
 )
 
-error InterfaceNotFound ()
+error InterfaceNotFound (interface: string)
