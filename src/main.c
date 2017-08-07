@@ -221,7 +221,7 @@ static long org_varlink_registry_Resolve(VarlinkServer *server,
 
         r = varlink_object_get_string(parameters, "interface", &interface_name);
         if (r < 0)
-                return varlink_call_reply_invalid_parameters(call, "interface", NULL);
+                return varlink_call_reply_invalid_parameter(call, "interface");
 
         r = manager_find_service_by_interface(m, interface_name, &service);
         if (r < 0) {
