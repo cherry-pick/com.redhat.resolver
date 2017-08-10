@@ -21,7 +21,7 @@ typedef struct {
 } Interface;
 
 typedef struct {
-        VarlinkServer *server;
+        VarlinkService *service;
 
         int epoll_fd;
         int signal_fd;
@@ -45,8 +45,8 @@ static void manager_free(Manager *m) {
         if (m->signal_fd >= 0)
                 close(m->signal_fd);
 
-        if (m->server)
-                varlink_server_free(m->server);
+        if (m->service)
+                varlink_service_free(m->service);
 
         free(m->interfaces);
 
@@ -208,7 +208,7 @@ static long manager_find_service_by_address(Manager *m, Service **servicep, cons
         return -ESRCH;
 }
 
-static long org_varlink_registry_Resolve(VarlinkServer *server,
+static long org_varlink_registry_Resolve(VarlinkService *resolver_service,
                                          VarlinkCall *call,
                                          VarlinkObject *parameters,
                                          uint64_t flags,
@@ -240,7 +240,7 @@ static long org_varlink_registry_Resolve(VarlinkServer *server,
         return varlink_call_reply(call, out, 0);
 }
 
-static long org_varlink_registry_GetConfig(VarlinkServer *server,
+static long org_varlink_registry_GetConfig(VarlinkService *resolver_service,
                                            VarlinkCall *call,
                                            VarlinkObject *parameters,
                                            uint64_t flags,
@@ -289,7 +289,7 @@ static long org_varlink_registry_GetConfig(VarlinkServer *server,
         return varlink_call_reply(call, configv, 0);
 }
 
-static long org_varlink_activator_GetInterfaces(VarlinkServer *server,
+static long org_varlink_activator_GetInterfaces(VarlinkService *service,
                                                 VarlinkCall *call,
                                                 VarlinkObject *parameters,
                                                 uint64_t flags,
@@ -316,7 +316,7 @@ static long org_varlink_activator_GetInterfaces(VarlinkServer *server,
         return varlink_call_reply(call, reply, 0);
 }
 
-static long org_varlink_registry_AddServices(VarlinkServer *server,
+static long org_varlink_registry_AddServices(VarlinkService *resolver_service,
                                              VarlinkCall *call,
                                              VarlinkObject *parameters,
                                              uint64_t flags,
@@ -544,10 +544,6 @@ static long manager_read_config(Manager *m, const char *config) {
 
 int main(int argc, char **argv) {
         _cleanup_(manager_freep) Manager *m = NULL;
-        const char *interfaces[] = {
-                org_varlink_activator_varlink,
-                org_varlink_resolver_varlink
-        };
         const char *address;
         int fd = -1;
         sigset_t mask;
@@ -571,40 +567,22 @@ int main(int argc, char **argv) {
         if (read(3, NULL, 0) == 0)
                 fd = 3;
 
-        r = varlink_server_new(&m->server,
-                               address, fd,
-                               NULL,
-                               interfaces, ARRAY_SIZE(interfaces));
+        r = varlink_service_new(&m->service, "org.varlink.resolver", VERSION, address, fd);
         if (r < 0)
                 return EXIT_FAILURE;
 
-        r = varlink_server_set_method_callback(m->server,
-                                               "org.varlink.resolver.Resolve",
-                                               org_varlink_registry_Resolve, m);
+        r = varlink_service_add_interface(m->service, org_varlink_resolver_varlink,
+                                          "Resolve", org_varlink_registry_Resolve, m,
+                                          "GetInterfaces", org_varlink_activator_GetInterfaces, m,
+                                          NULL);
         if (r < 0)
                 return EXIT_FAILURE;
 
-        r = varlink_server_set_method_callback(m->server,
-                                               "org.varlink.activator.AddServices",
-                                               org_varlink_registry_AddServices, m);
-        if (r < 0)
-                return EXIT_FAILURE;
-
-        r = varlink_server_set_method_callback(m->server,
-                                               "org.varlink.activator.GetConfig",
-                                               org_varlink_registry_GetConfig, m);
-        if (r < 0)
-                return EXIT_FAILURE;
-
-        r = varlink_server_set_method_callback(m->server,
-                                               "org.varlink.resolver.GetInterfaces",
-                                               org_varlink_activator_GetInterfaces, m);
-        if (r < 0)
-                return EXIT_FAILURE;
-
-        r = varlink_server_set_method_callback(m->server,
-                                               "org.varlink.activator.GetInterfaces",
-                                               org_varlink_activator_GetInterfaces, m);
+        r = varlink_service_add_interface(m->service, org_varlink_activator_varlink,
+                                          "GetConfig", org_varlink_registry_GetConfig, m,
+                                          "GetInterfaces", org_varlink_activator_GetInterfaces, m,
+                                          "AddServices", org_varlink_registry_AddServices, m,
+                                          NULL);
         if (r < 0)
                 return EXIT_FAILURE;
 
@@ -613,8 +591,8 @@ int main(int argc, char **argv) {
                 return EXIT_FAILURE;
 
         ev.events = EPOLLIN;
-        ev.data.fd = varlink_server_get_fd(m->server);
-        if (epoll_ctl(m->epoll_fd, EPOLL_CTL_ADD, varlink_server_get_fd(m->server), &ev) < 0)
+        ev.data.fd = varlink_service_get_fd(m->service);
+        if (epoll_ctl(m->epoll_fd, EPOLL_CTL_ADD, varlink_service_get_fd(m->service), &ev) < 0)
                 return EXIT_FAILURE;
 
         sigemptyset(&mask);
@@ -673,8 +651,8 @@ int main(int argc, char **argv) {
                         continue;
                 }
 
-                if (ev.data.fd == varlink_server_get_fd(m->server)) {
-                        r = varlink_server_process_events(m->server);
+                if (ev.data.fd == varlink_service_get_fd(m->service)) {
+                        r = varlink_service_process_events(m->service);
                         if (r < 0) {
                                 fprintf(stderr, "varlink: %s\n", strerror(-r));
 
