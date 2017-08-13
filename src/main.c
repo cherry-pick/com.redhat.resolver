@@ -608,7 +608,13 @@ int main(int argc, char **argv) {
         if (read(3, NULL, 0) == 0)
                 fd = 3;
 
-        r = varlink_service_new(&m->service, "org.varlink.resolver", VERSION, address, fd);
+        r = varlink_service_new(&m->service,
+                                "Varlink",
+                                "Resolver",
+                                VERSION,
+                                "https://github.com/varlink/org.varlink.resolver",
+                                address,
+                                fd);
         if (r < 0)
                 return EXIT_FAILURE;
 
