@@ -41,12 +41,12 @@ AM_LDFLAGS = $(OUR_LDFLAGS)
 # ------------------------------------------------------------------------------
 # varlink interface files
 
-%.varlink.h: %.varlink
+%.varlink.inc.c: %.varlink
 	$(AM_V_GEN) \
-		echo -e "#pragma once\n" > $@ && \
-		echo "static const char *$(subst .,_,$(patsubst %.h,%,$(notdir $<))) = R\"(" >> $@ && \
+		if [ -x /usr/bin/varlink ]; then varlink format $< >/dev/null; fi && \
+		echo "static const char *$(subst .,_,$(patsubst %.h,%,$(notdir $<))) = R\"INTERFACE(" > $@ && \
 		cat $< >> $@ && \
-		echo ")\";" >> $@
+		echo ")INTERFACE\";" >> $@
 
 # ------------------------------------------------------------------------------
 bin_PROGRAMS += \
@@ -54,8 +54,6 @@ bin_PROGRAMS += \
 
 org_varlink_resolver_SOURCES = \
 	src/main.c \
-	src/org.varlink.activator.varlink.h \
-	src/org.varlink.resolver.varlink.h \
 	src/service.c \
 	src/service.h \
 	src/util.h
@@ -68,8 +66,8 @@ org_varlink_resolver_LDADD = \
 	$(VARLINK_LIBS)
 
 BUILT_SOURCES += \
-	src/org.varlink.activator.varlink.h \
-	src/org.varlink.resolver.varlink.h
+	src/org.varlink.activator.varlink.inc.c \
+	src/org.varlink.resolver.varlink.inc.c
 
 EXTRA_DIST += \
 	src/org.varlink.activator.varlink \

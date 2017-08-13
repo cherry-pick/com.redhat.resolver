@@ -18,19 +18,18 @@ type Service (
 )
 
 type Config (
+  vendor: string,
+  product: string,
+  version: string,
+  url: string,
   services: Service[]
 )
 
 # Retrieve the current configuration.
 method GetConfig() -> (config: Config)
 
-# Add services to the current list of managed services.
+# Add services to the list of managed services.
 method AddServices(services: Service[]) -> ()
 
 # Remove and stop services from the list of manages services.
-method RemoveService(interface: string) -> ()
-
-# Retrieve the current list of available interfaces.
-method GetInterfaces() -> (
-  interfaces: (interface: string, address: string)[]
-)
+method RemoveService(services: Service[]) -> ()

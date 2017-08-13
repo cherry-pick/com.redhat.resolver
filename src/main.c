@@ -1,5 +1,3 @@
-#include "org.varlink.activator.varlink.h"
-#include "org.varlink.resolver.varlink.h"
 #include "service.h"
 #include "util.h"
 
@@ -15,6 +13,9 @@
 #include <unistd.h>
 #include <varlink.h>
 
+#include "org.varlink.activator.varlink.inc.c"
+#include "org.varlink.resolver.varlink.inc.c"
+
 typedef struct {
         const char *name;
         Service *service;
@@ -25,6 +26,11 @@ typedef struct {
 
         int epoll_fd;
         int signal_fd;
+
+        char *vendor;
+        char *product;
+        char *version;
+        char *url;
 
         Service **services;
         unsigned long n_services;
@@ -44,6 +50,11 @@ static void manager_free(Manager *m) {
 
         if (m->signal_fd >= 0)
                 close(m->signal_fd);
+
+        free(m->vendor);
+        free(m->product);
+        free(m->version);
+        free(m->url);
 
         if (m->service)
                 varlink_service_free(m->service);
@@ -102,7 +113,7 @@ static long manager_add_service(Manager *m, Service *service) {
         m->n_services += 1;
 
         if (service->executable) {
-                r = manager_watch_service(m , service);
+                r = manager_watch_service(m, service);
                 if (r < 0)
                         return r;
         }
@@ -208,7 +219,7 @@ static long manager_find_service_by_address(Manager *m, Service **servicep, cons
         return -ESRCH;
 }
 
-static long org_varlink_registry_Resolve(VarlinkService *resolver_service,
+static long org_varlink_resolver_Resolve(VarlinkService *resolver_service,
                                          VarlinkCall *call,
                                          VarlinkObject *parameters,
                                          uint64_t flags,
@@ -240,18 +251,28 @@ static long org_varlink_registry_Resolve(VarlinkService *resolver_service,
         return varlink_call_reply(call, out, 0);
 }
 
-static long org_varlink_registry_GetConfig(VarlinkService *resolver_service,
-                                           VarlinkCall *call,
-                                           VarlinkObject *parameters,
-                                           uint64_t flags,
-                                           void *userdata) {
+static long org_varlink_activator_GetConfig(VarlinkService *resolver_service,
+                                            VarlinkCall *call,
+                                            VarlinkObject *parameters,
+                                            uint64_t flags,
+                                            void *userdata) {
         Manager *m = userdata;
         _cleanup_(varlink_array_unrefp) VarlinkArray *servicesv = NULL;
         _cleanup_(varlink_object_unrefp) VarlinkObject *configv = NULL;
         long r;
 
-        varlink_array_new(&servicesv);
+        varlink_object_new(&configv);
 
+        if (m->vendor)
+                varlink_object_set_string(configv, "vendor", m->vendor);
+        if (m->product)
+                varlink_object_set_string(configv, "product", m->product);
+        if (m->version)
+                varlink_object_set_string(configv, "version", m->version);
+        if (m->url)
+                varlink_object_set_string(configv, "url", m->url);
+
+        varlink_array_new(&servicesv);
         for (unsigned long s = 0; s < m->n_services; s += 1) {
                 Service *service = m->services[s];
                 _cleanup_(varlink_object_unrefp) VarlinkObject *servicev = NULL;
@@ -283,23 +304,32 @@ static long org_varlink_registry_GetConfig(VarlinkService *resolver_service,
                         return r;
         }
 
-        varlink_object_new(&configv);
         varlink_object_set_array(configv, "services", servicesv);
 
         return varlink_call_reply(call, configv, 0);
 }
 
-static long org_varlink_activator_GetInterfaces(VarlinkService *service,
-                                                VarlinkCall *call,
-                                                VarlinkObject *parameters,
-                                                uint64_t flags,
-                                                void *userdata) {
+static long org_varlink_resolver_GetInfo(VarlinkService *service,
+                                         VarlinkCall *call,
+                                         VarlinkObject *parameters,
+                                         uint64_t flags,
+                                         void *userdata) {
         Manager *m = userdata;
         _cleanup_(varlink_object_unrefp) VarlinkObject *reply = NULL;
         _cleanup_(varlink_array_unrefp) VarlinkArray *interfaces = NULL;
 
-        varlink_array_new(&interfaces);
+        varlink_object_new(&reply);
 
+        if (m->vendor)
+                varlink_object_set_string(reply, "vendor", m->vendor);
+        if (m->product)
+                varlink_object_set_string(reply, "product", m->product);
+        if (m->version)
+                varlink_object_set_string(reply, "version", m->version);
+        if (m->url)
+                varlink_object_set_string(reply, "url", m->url);
+
+        varlink_array_new(&interfaces);
         for (unsigned long i = 0; i < m->n_interfaces; i += 1) {
                 _cleanup_(varlink_object_unrefp) VarlinkObject *interface = NULL;
 
@@ -309,18 +339,16 @@ static long org_varlink_activator_GetInterfaces(VarlinkService *service,
 
                 varlink_array_append_object(interfaces, interface);
         }
-
-        varlink_object_new(&reply);
         varlink_object_set_array(reply, "interfaces", interfaces);
 
         return varlink_call_reply(call, reply, 0);
 }
 
-static long org_varlink_registry_AddServices(VarlinkService *resolver_service,
-                                             VarlinkCall *call,
-                                             VarlinkObject *parameters,
-                                             uint64_t flags,
-                                             void *userdata) {
+static long org_varlink_activator_AddServices(VarlinkService *resolver_service,
+                                              VarlinkCall *call,
+                                              VarlinkObject *parameters,
+                                              uint64_t flags,
+                                              void *userdata) {
         Manager *m = userdata;
         long n_services;
         _cleanup_(varlink_array_unrefp) VarlinkArray *servicesv = NULL;
@@ -451,6 +479,7 @@ static long manager_read_config(Manager *m, const char *config) {
         _cleanup_(fclosep) FILE *f = NULL;
         char json[0xffff];
         _cleanup_(varlink_object_unrefp) VarlinkObject *configv = NULL;
+        const char *str;
         VarlinkArray *servicesv;
         long n_services;
         long r;
@@ -476,6 +505,18 @@ static long manager_read_config(Manager *m, const char *config) {
         r = varlink_object_new_from_json(&configv, json);
         if (r < 0)
                 return r;
+
+        if (varlink_object_get_string(configv, "vendor", &str) >= 0)
+                m->vendor = strdup(str);
+
+        if (varlink_object_get_string(configv, "product", &str) >= 0)
+                m->product = strdup(str);
+
+        if (varlink_object_get_string(configv, "version", &str) >= 0)
+                m->version = strdup(str);
+
+        if (varlink_object_get_string(configv, "url", &str) >= 0)
+                m->url = strdup(str);
 
         r = varlink_object_get_array(configv, "services", &servicesv);
         if (r < 0)
@@ -572,16 +613,15 @@ int main(int argc, char **argv) {
                 return EXIT_FAILURE;
 
         r = varlink_service_add_interface(m->service, org_varlink_resolver_varlink,
-                                          "Resolve", org_varlink_registry_Resolve, m,
-                                          "GetInterfaces", org_varlink_activator_GetInterfaces, m,
+                                          "Resolve", org_varlink_resolver_Resolve, m,
+                                          "GetInfo", org_varlink_resolver_GetInfo, m,
                                           NULL);
         if (r < 0)
                 return EXIT_FAILURE;
 
         r = varlink_service_add_interface(m->service, org_varlink_activator_varlink,
-                                          "GetConfig", org_varlink_registry_GetConfig, m,
-                                          "GetInterfaces", org_varlink_activator_GetInterfaces, m,
-                                          "AddServices", org_varlink_registry_AddServices, m,
+                                          "GetConfig", org_varlink_activator_GetConfig, m,
+                                          "AddServices", org_varlink_activator_AddServices, m,
                                           NULL);
         if (r < 0)
                 return EXIT_FAILURE;
