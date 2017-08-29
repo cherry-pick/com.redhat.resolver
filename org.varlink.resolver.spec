@@ -1,13 +1,10 @@
-%define build_date %(date +"%%a %%b %%d %%Y")
-%define build_timestamp %(date +"%%Y%%m%%d.%%H%M%%S")
-
 Name:           org.varlink.resolver
 Version:        1
-Release:        %{build_timestamp}%{?dist}
+Release:        1%{?dist}
 Summary:        Varlink Service Activator
 License:        ASL2.0
 URL:            https://github.com/varlink/org.varlink.resolver
-Source0:        https://github.com/varlink/org.varlink.resolver/archive/v%{version}.tar.gz
+Source0:        https://github.com/varlink/org.varlink.resolver/archive/%{name}-%{version}.tar.gz
 BuildRequires:  autoconf automake pkgconfig
 BuildRequires:  libvarlink-devel
 
@@ -32,5 +29,5 @@ make %{?_smp_mflags}
 %{_bindir}/org.varlink.resolver
 
 %changelog
-* %{build_date} <info@varlink.org> %{version}-%{build_timestamp}
-- %{name} %{version}
+* Tue Aug 29 2017 <info@varlink.org> 1-1
+- org.varlink.resolver 1
