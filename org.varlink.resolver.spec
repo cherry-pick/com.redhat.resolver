@@ -5,7 +5,9 @@ Summary:        Varlink Service Activator
 License:        ASL2.0
 URL:            https://github.com/varlink/org.varlink.resolver
 Source0:        https://github.com/varlink/org.varlink.resolver/archive/%{name}-%{version}.tar.gz
-BuildRequires:  autoconf automake pkgconfig
+BuildRequires:  meson
+BuildRequires:  gcc
+BuildRequires:  pkgconfig
 BuildRequires:  libvarlink-devel
 
 %description
@@ -15,16 +17,17 @@ Varlink service registry and on-demand activator.
 %setup -q
 
 %build
-./autogen.sh
-%configure
-make %{?_smp_mflags}
+%meson
+%meson_build
+
+%check
+export LC_CTYPE=C.utf8
+%meson_test
 
 %install
-%make_install
+%meson_install
 
 %files
-%license AUTHORS
-%license COPYRIGHT
 %license LICENSE
 %{_bindir}/org.varlink.resolver
 

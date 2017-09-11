@@ -13,8 +13,8 @@
 #include <unistd.h>
 #include <varlink.h>
 
-#include "org.varlink.activator.varlink.inc.c"
-#include "org.varlink.resolver.varlink.inc.c"
+#include "org.varlink.activator.varlink.c.inc"
+#include "org.varlink.resolver.varlink.c.inc"
 
 typedef struct {
         const char *name;
