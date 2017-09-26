@@ -330,15 +330,8 @@ static long org_varlink_resolver_GetInfo(VarlinkService *service,
                 varlink_object_set_string(reply, "url", m->url);
 
         varlink_array_new(&interfaces);
-        for (unsigned long i = 0; i < m->n_interfaces; i += 1) {
-                _cleanup_(varlink_object_unrefp) VarlinkObject *interface = NULL;
-
-                varlink_object_new(&interface);
-                varlink_object_set_string(interface, "interface", m->interfaces[i].name);
-                varlink_object_set_string(interface, "address", m->interfaces[i].service->address);
-
-                varlink_array_append_object(interfaces, interface);
-        }
+        for (unsigned long i = 0; i < m->n_interfaces; i += 1)
+                varlink_array_append_string(interfaces, m->interfaces[i].name);
         varlink_object_set_array(reply, "interfaces", interfaces);
 
         return varlink_call_reply(call, reply, 0);
