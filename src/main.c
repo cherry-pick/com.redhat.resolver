@@ -611,6 +611,10 @@ int main(int argc, char **argv) {
         if (r < 0)
                 return EXIT_FAILURE;
 
+        r = varlink_service_set_credentials_mode(m->service, 0666);
+        if (r < 0)
+                return EXIT_FAILURE;
+
         r = varlink_service_add_interface(m->service, org_varlink_resolver_varlink,
                                           "Resolve", org_varlink_resolver_Resolve, m,
                                           "GetInfo", org_varlink_resolver_GetInfo, m,
@@ -692,10 +696,14 @@ int main(int argc, char **argv) {
 
                 if (ev.data.fd == varlink_service_get_fd(m->service)) {
                         r = varlink_service_process_events(m->service);
-                        if (r < 0) {
-                                fprintf(stderr, "varlink: %s\n", strerror(-r));
+                        switch(r) {
+                                case 0:
+                                case -VARLINK_ERROR_CANNOT_ACCEPT:
+                                case -VARLINK_ERROR_CONNECTION_CLOSED:
+                                        break;
 
-                                if (r != -EPIPE)
+                                default:
+                                        fprintf(stderr, "varlink error: %ld\n", -r);
                                         return EXIT_FAILURE;
                         }
 
