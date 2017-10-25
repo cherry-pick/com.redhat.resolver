@@ -703,7 +703,7 @@ int main(int argc, char **argv) {
                                         break;
 
                                 default:
-                                        fprintf(stderr, "varlink error: %ld\n", -r);
+                                        fprintf(stderr, "Error processing events: %s\n", varlink_error_string(-r));
                                         return EXIT_FAILURE;
                         }
 
