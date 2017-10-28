@@ -9,6 +9,7 @@
 #include <sys/epoll.h>
 #include <sys/prctl.h>
 #include <sys/signalfd.h>
+#include <sys/stat.h>
 #include <sys/wait.h>
 #include <unistd.h>
 #include <varlink.h>
@@ -297,7 +298,7 @@ static long org_varlink_activator_GetConfig(VarlinkService *resolver_service,
                 varlink_object_set_string(servicev, "address", service->address);
                 varlink_object_set_array(servicev, "interfaces", interfacesv);
                 varlink_object_set_object(servicev, "executable", executablev);
-                varlink_object_set_bool(servicev, "run_at_startup", service->activate_at_startup);
+                varlink_object_set_bool(servicev, "activate_at_startup", service->activate_at_startup);
 
                 r = varlink_array_append_object(servicesv, servicev);
                 if (r < 0)
@@ -361,6 +362,8 @@ static long org_varlink_activator_AddServices(VarlinkService *resolver_service,
                 _cleanup_(varlink_array_unrefp) VarlinkArray *interfacesv = NULL;
                 const char *address;
                 const char *executable = NULL;
+                uid_t uid = (uid_t)-1;
+                gid_t gid = (gid_t)-1;
                 bool activate = false;
                 _cleanup_(freep) const char **interfaces = NULL;
                 unsigned long n_interfaces;
@@ -375,9 +378,17 @@ static long org_varlink_activator_AddServices(VarlinkService *resolver_service,
                         return -EUCLEAN;
 
                 if (varlink_object_get_object(servicev, "executable", &executablev) >= 0) {
+                        int64_t i;
+
                         r = varlink_object_get_string(executablev, "path", &executable);
                         if (r < 0)
                                 return r;
+
+                        if (varlink_object_get_int(servicev, "user_id", &i) >= 0)
+                                uid = i;
+
+                        if (varlink_object_get_int(servicev, "group_id", &i) >= 0)
+                                gid = i;
                 }
 
                 varlink_object_get_bool(executablev, "activate_at_startup", &activate);
@@ -398,6 +409,7 @@ static long org_varlink_activator_AddServices(VarlinkService *resolver_service,
                                 address,
                                 interfaces, n_interfaces,
                                 executable,
+                                uid, gid,
                                 activate,
                                 NULL);
                 if (r < 0)
@@ -527,6 +539,8 @@ static long manager_read_config(Manager *m, const char *config) {
                 _cleanup_(freep) const char **interfaces = NULL;
                 unsigned long n_interfaces;
                 const char *executable = NULL;
+                uid_t uid = (uid_t)-1;
+                gid_t gid = (gid_t)-1;
                 bool activate = false;
                 _cleanup_(service_freep) Service *service = NULL;
 
@@ -538,9 +552,17 @@ static long manager_read_config(Manager *m, const char *config) {
                         return -EUCLEAN;
 
                 if (varlink_object_get_object(servicev, "executable", &executablev) >= 0) {
+                        int64_t i;
+
                         r = varlink_object_get_string(executablev, "path", &executable);
                         if (r < 0)
                                 return r;
+
+                        if (varlink_object_get_int(servicev, "user_id", &i) >= 0)
+                                uid = i;
+
+                        if (varlink_object_get_int(servicev, "group_id", &i) >= 0)
+                                gid = i;
                 }
 
                 varlink_object_get_bool(servicev, "activate_at_startup", &activate);
@@ -561,6 +583,7 @@ static long manager_read_config(Manager *m, const char *config) {
                                 address,
                                 interfaces, n_interfaces,
                                 executable,
+                                uid, gid,
                                 activate,
                                 NULL);
                 if (r < 0)
@@ -597,7 +620,7 @@ int main(int argc, char **argv) {
                 return EXIT_FAILURE;
         }
 
-        /* An activator passed us our connection. */
+        /* An activator passed us our listen socket. */
         if (read(3, NULL, 0) == 0)
                 fd = 3;
 
@@ -608,10 +631,6 @@ int main(int argc, char **argv) {
                                 "https://github.com/varlink/org.varlink.resolver",
                                 address,
                                 fd);
-        if (r < 0)
-                return EXIT_FAILURE;
-
-        r = varlink_service_set_credentials_mode(m->service, 0666);
         if (r < 0)
                 return EXIT_FAILURE;
 

@@ -14,8 +14,9 @@ typedef struct {
         unsigned long n_interfaces;
         char **interfaces;
 
-        char *executable;
         char *config;
+
+        char *executable;
         uid_t uid;
         gid_t gid;
         char **argv;
@@ -29,6 +30,8 @@ long service_new(Service **servicep,
                  const char *address,
                  const char **interfaces, unsigned long n_interfaces,
                  const char *executable,
+                 uid_t uid,
+                 gid_t gid,
                  bool activate,
                  const char *config);
 Service *service_free(Service *service);

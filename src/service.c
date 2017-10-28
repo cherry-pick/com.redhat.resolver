@@ -7,12 +7,15 @@
 #include <string.h>
 #include <signal.h>
 #include <sys/prctl.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
 long service_new(Service **servicep,
                  const char *address,
                  const char **interfaces, unsigned long n_interfaces,
                  const char *executable,
+                 uid_t uid,
+                 gid_t gid,
                  bool activate,
                  const char *config) {
         _cleanup_(service_freep) Service *service = NULL;
