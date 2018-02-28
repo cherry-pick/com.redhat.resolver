@@ -110,6 +110,8 @@ void service_freep(Service **servicep) {
 }
 
 long service_activate(Service *service) {
+        char s[32];
+
         assert(service->executable);
         assert(service->pid < 0);
 
@@ -119,6 +121,10 @@ long service_activate(Service *service) {
 
         if (service->pid > 0)
                 return 0;
+
+        sprintf(s, "%d", getpid());
+        setenv("LISTEN_PID", s, true);
+        setenv("LISTEN_FDS", "1", true);
 
         /* Move activator fd to fd 3. All other fds have CLOEXEC set. */
         if (dup2(service->listen_fd, 3) < 0)
