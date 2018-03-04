@@ -1,5 +1,6 @@
 #include "util.h"
 
+#include <signal.h>
 #include <string.h>
 #include <unistd.h>
 #include <varlink.h>
@@ -37,4 +38,4 @@ long service_new(Service **servicep,
 Service *service_free(Service *service);
 void service_freep(Service **servicep);
 long service_reset(Service *service);
-long service_activate(Service *service);
+long service_activate(Service *service, sigset_t *mask);

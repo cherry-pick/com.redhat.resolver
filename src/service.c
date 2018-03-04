@@ -109,7 +109,7 @@ void service_freep(Service **servicep) {
                 service_free(*servicep);
 }
 
-long service_activate(Service *service) {
+long service_activate(Service *service, sigset_t *mask) {
         char s[32];
 
         assert(service->executable);
@@ -121,6 +121,8 @@ long service_activate(Service *service) {
 
         if (service->pid > 0)
                 return 0;
+
+        sigprocmask(SIG_SETMASK, mask, NULL);
 
         sprintf(s, "%d", getpid());
         setenv("LISTEN_PID", s, true);

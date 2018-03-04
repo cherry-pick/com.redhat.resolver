@@ -39,6 +39,8 @@ typedef struct {
 
         Interface *interfaces;
         unsigned long n_interfaces;
+
+        sigset_t oldmask;
 } Manager;
 
 static void manager_free(Manager *m) {
@@ -441,7 +443,7 @@ static long manager_activate_service(Manager *m, Service *service) {
 
         manager_unwatch_service(m, service);
 
-        return service_activate(service);
+        return service_activate(service, &m->oldmask);
 }
 
 static long manager_activate_configured_services(Manager *m) {
@@ -661,7 +663,7 @@ int main(int argc, char **argv) {
         sigaddset(&mask, SIGCHLD);
         sigaddset(&mask, SIGINT);
         sigaddset(&mask, SIGTERM);
-        sigprocmask(SIG_BLOCK, &mask, NULL);
+        sigprocmask(SIG_BLOCK, &mask, &m->oldmask);
 
         m->signal_fd = signalfd(-1, &mask, SFD_NONBLOCK | SFD_CLOEXEC);
         if (m->signal_fd < 0)
