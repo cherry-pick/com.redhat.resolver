@@ -1,5 +1,7 @@
-# org.varlink.resolver
+# com.redhat.resolver
 
-Interface [resolver](https://github.com/varlink/org.varlink.resolver/blob/master/src/org.varlink.resolver.varlink) and
-[activator](https://github.com/varlink/org.varlink.resolver/blob/master/src/org.varlink.activator.varlink)
-for [varlink](http://varlink.org) services.
+Service [activator](https://github.com/varlink/com.redhat.resolver/blob/master/src/com.redhat.resolver.varlink) implementing
+the common varlink [resolver](https://github.com/varlink/com.redhat.resolver/blob/master/src/org.varlink.resolver.varlink) interface.
+
+Listening at _unix:/run/org.varlink.resolver_ to resolve varlink interface names to varlink addresses. Configured services will be
+activated on-demand.

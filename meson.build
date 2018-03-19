@@ -1,4 +1,4 @@
-project('org.varlink.resolver', 'c',
+project('com.redhat.resolver', 'c',
         version : '1',
         license : 'ASL2.0',
         default_options: [

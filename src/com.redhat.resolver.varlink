@@ -2,7 +2,7 @@
 # interfaces. When an interface is accessed by a client, the activator receives
 # the initial message, starts the service which implements this interface, and
 # hands over the listening connection with the initial message.
-interface org.varlink.activator
+interface com.redhat.resolver
 
 type Executable (
   path: string,

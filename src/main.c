@@ -14,7 +14,7 @@
 #include <unistd.h>
 #include <varlink.h>
 
-#include "org.varlink.activator.varlink.c.inc"
+#include "com.redhat.resolver.varlink.c.inc"
 #include "org.varlink.resolver.varlink.c.inc"
 
 typedef struct {
@@ -254,7 +254,7 @@ static long org_varlink_resolver_Resolve(VarlinkService *resolver_service,
         return varlink_call_reply(call, out, 0);
 }
 
-static long org_varlink_activator_GetConfig(VarlinkService *resolver_service,
+static long com_redhat_resolver_GetConfig(VarlinkService *resolver_service,
                                             VarlinkCall *call,
                                             VarlinkObject *parameters,
                                             uint64_t flags,
@@ -340,7 +340,7 @@ static long org_varlink_resolver_GetInfo(VarlinkService *service,
         return varlink_call_reply(call, reply, 0);
 }
 
-static long org_varlink_activator_AddServices(VarlinkService *resolver_service,
+static long com_redhat_resolver_AddServices(VarlinkService *resolver_service,
                                               VarlinkCall *call,
                                               VarlinkObject *parameters,
                                               uint64_t flags,
@@ -643,9 +643,9 @@ int main(int argc, char **argv) {
         if (r < 0)
                 return EXIT_FAILURE;
 
-        r = varlink_service_add_interface(m->service, org_varlink_activator_varlink,
-                                          "GetConfig", org_varlink_activator_GetConfig, m,
-                                          "AddServices", org_varlink_activator_AddServices, m,
+        r = varlink_service_add_interface(m->service, com_redhat_resolver_varlink,
+                                          "GetConfig", com_redhat_resolver_GetConfig, m,
+                                          "AddServices", com_redhat_resolver_AddServices, m,
                                           NULL);
         if (r < 0)
                 return EXIT_FAILURE;
