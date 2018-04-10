@@ -9,7 +9,7 @@ method GetInfo() -> (
   product: string,
   version: string,
   url: string,
-  interfaces: string[]
+  interfaces: []string
 )
 
 # Resolve an interface name to a registered varlink service address

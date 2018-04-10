@@ -12,7 +12,7 @@ type Executable (
 
 type Service (
   address: string,
-  interfaces: string[],
+  interfaces: []string,
   executable: Executable,
   activate_at_startup: bool
 )
@@ -22,14 +22,14 @@ type Config (
   product: string,
   version: string,
   url: string,
-  services: Service[]
+  services: []Service
 )
 
 # Retrieve the current configuration.
 method GetConfig() -> (config: Config)
 
 # Add services to the list of managed services.
-method AddServices(services: Service[]) -> ()
+method AddServices(services: []Service) -> ()
 
 # Remove and stop services from the list of manages services.
-method RemoveService(services: Service[]) -> ()
+method RemoveService(services: []Service) -> ()
