@@ -4,6 +4,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <getopt.h>
 #include <string.h>
 #include <signal.h>
 #include <sys/epoll.h>
@@ -602,8 +603,14 @@ static long manager_read_config(Manager *m, const char *config) {
 }
 
 int main(int argc, char **argv) {
+        static const struct option options[] = {
+                { "varlink", required_argument, NULL, 'v' },
+                { "help",    no_argument,       NULL, 'h' },
+                {}
+        };
+        int c;
         _cleanup_(manager_freep) Manager *m = NULL;
-        const char *address;
+        const char *address = NULL;
         int fd = -1;
         sigset_t mask;
         struct epoll_event ev = {};
@@ -615,10 +622,19 @@ int main(int argc, char **argv) {
         if (r < 0)
                 return EXIT_FAILURE;
 
-        address = argv[1];
+        while ((c = getopt_long(argc, argv, ":vh", options, NULL)) >= 0) {
+                switch (c) {
+                        case 'h':
+                                printf("Usage: %s --varlink=URI\n\n", program_invocation_short_name);
+                                return EXIT_SUCCESS;
+
+                        case 'v':
+                                address = optarg;
+                }
+        }
+
         if (!address) {
                 fprintf(stderr, "Error: missing address.\n");
-
                 return EXIT_FAILURE;
         }
 
