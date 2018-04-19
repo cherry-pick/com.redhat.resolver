@@ -22,7 +22,6 @@ long service_new(Service **servicep,
 
         service = calloc(1, sizeof(Service));
         service->pid = -1;
-
         service->address = strdup(address);
 
         service->interfaces = calloc(n_interfaces, sizeof(char *));
@@ -34,14 +33,14 @@ long service_new(Service **servicep,
                 int listen_fd;
 
                 service->executable = strdup(executable);
-
-                if (config)
-                        service->config = strdup(config);
-
                 service->argv = calloc(3, sizeof(char *));
-                service->argv[0] = service->executable;
-                service->argv[1] = service->address;
-                service->argv[2] = service->config;
+                service->argv[0] = strdup(service->executable);
+                asprintf(&service->argv[1], "--varlink=%s", service->address);
+
+                if (config) {
+                        service->config = strdup(config);
+                        asprintf(&service->argv[2], "--config=%s", service->config);
+                }
 
                 listen_fd = varlink_listen(service->address, &service->path_to_unlink);
                 if (listen_fd < 0)
@@ -95,10 +94,13 @@ Service *service_free(Service *service) {
                 free(service->interfaces[i]);
         free(service->interfaces);
 
+        for (char *arg = *service->argv; arg ; arg++)
+                free(arg);
+        free(service->argv);
+
         free(service->address);
         free(service->executable);
         free(service->config);
-        free(service->argv);
         free(service);
 
         return NULL;
