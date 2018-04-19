@@ -604,6 +604,7 @@ static long manager_read_config(Manager *m, const char *config) {
 
 int main(int argc, char **argv) {
         static const struct option options[] = {
+                { "config",  required_argument, NULL, 'c' },
                 { "varlink", required_argument, NULL, 'v' },
                 { "help",    no_argument,       NULL, 'h' },
                 {}
@@ -611,6 +612,7 @@ int main(int argc, char **argv) {
         int c;
         _cleanup_(manager_freep) Manager *m = NULL;
         const char *address = NULL;
+        const char *config = NULL;
         int fd = -1;
         sigset_t mask;
         struct epoll_event ev = {};
@@ -624,12 +626,17 @@ int main(int argc, char **argv) {
 
         while ((c = getopt_long(argc, argv, ":vh", options, NULL)) >= 0) {
                 switch (c) {
+                        case 'c':
+                                config = optarg;
+                                break;
+
                         case 'h':
                                 printf("Usage: %s --varlink=URI\n\n", program_invocation_short_name);
                                 return EXIT_SUCCESS;
 
                         case 'v':
                                 address = optarg;
+                                break;
                 }
         }
 
@@ -693,8 +700,8 @@ int main(int argc, char **argv) {
         if (prctl(PR_SET_CHILD_SUBREAPER, 1) < 0)
                 return EXIT_FAILURE;
 
-        if (argv[2]) {
-                r = manager_read_config(m, argv[2]);
+        if (config) {
+                r = manager_read_config(m, config);
                 if (r < 0) {
                         fprintf(stderr, "Error: reading configuration: %s.\n", strerror(-r));
 
